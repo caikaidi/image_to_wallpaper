@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>景深壁纸生成器</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="panel">
+        <h1>景深壁纸生成器</h1>
+        <p>上传一张壁纸，自动生成背景模糊 + 前景分片窗口效果，可拖拽后导出。</p>
+
+        <label class="field">
+          <span>上传图片</span>
+          <input id="imageInput" type="file" accept="image/*" />
+        </label>
+
+        <label class="field">
+          <span>窗口数量</span>
+          <input id="windowCount" type="range" min="1" max="10" value="5" />
+          <strong id="windowCountValue">5</strong>
+        </label>
+
+        <label class="field">
+          <span>背景模糊强度</span>
+          <input id="blurStrength" type="range" min="0" max="30" value="10" />
+          <strong id="blurStrengthValue">10px</strong>
+        </label>
+
+        <div class="actions">
+          <button id="resetLayout" type="button" class="secondary">重置窗口布局</button>
+          <button id="exportPng" type="button">导出 PNG</button>
+        </div>
+      </section>
+
+      <section class="preview-wrap">
+        <div id="preview" class="preview" aria-label="壁纸预览区域">
+          <div id="bg" class="layer bg"></div>
+          <div id="windows" class="windows"></div>
+          <div class="hint">拖动任意窗口可调整位置</div>
+        </div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
