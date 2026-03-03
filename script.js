@@ -239,6 +239,17 @@ function exportPreviewAsPng() {
   baseImage.src = imageURL;
 
   baseImage.onload = () => {
+    const unblurredPreview = document.createElement('canvas');
+    unblurredPreview.width = Math.round(rect.width);
+    unblurredPreview.height = Math.round(rect.height);
+    const unblurredPreviewCtx = unblurredPreview.getContext('2d');
+
+    if (!unblurredPreviewCtx) return;
+
+    // Keep the exported slice mapping exactly consistent with the on-screen preview.
+    // The preview slices use a stretched background sized to the preview bounds.
+    unblurredPreviewCtx.drawImage(baseImage, 0, 0, rect.width, rect.height);
+
     ctx.scale(scale, scale);
 
     const blurValue = Number.parseInt(blurStrengthInput.value, 10);
@@ -256,7 +267,7 @@ function exportPreviewAsPng() {
       ctx.shadowColor = 'rgba(0,0,0,0.65)';
       ctx.shadowBlur = 14;
       ctx.shadowOffsetY = 8;
-      ctx.drawImage(baseImage, left, top, width, height, left, top, width, height);
+      ctx.drawImage(unblurredPreview, left, top, width, height, left, top, width, height);
       ctx.restore();
 
       ctx.strokeStyle = 'rgba(255,255,255,0.75)';
