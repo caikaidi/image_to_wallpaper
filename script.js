@@ -12,6 +12,8 @@ const windows = document.getElementById('windows');
 const DEFAULT_IMAGE =
   'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80';
 
+const MIN_SLICE_RATIO = 0.12;
+
 let imageURL = DEFAULT_IMAGE;
 let uploadedImageObjectURL = null;
 let pointerState = null;
@@ -59,11 +61,16 @@ function syncSliceStyle(sliceModel, element) {
   element.style.backgroundPosition = `${-left}px ${-top}px`;
 }
 
-function makeDraggable(element, model) {
+function makeDraggableAndResizable(element, handle, model) {
   element.addEventListener('pointerdown', (event) => {
+    if (event.target === handle) {
+      return;
+    }
+
     event.preventDefault();
     element.setPointerCapture(event.pointerId);
     pointerState = {
+      mode: 'drag',
       id: event.pointerId,
       target: element,
       model,
@@ -73,6 +80,24 @@ function makeDraggable(element, model) {
       originYRatio: model.yRatio
     };
     element.classList.add('dragging');
+  });
+
+  handle.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    handle.setPointerCapture(event.pointerId);
+    pointerState = {
+      mode: 'resize',
+      id: event.pointerId,
+      target: handle,
+      element,
+      model,
+      startX: event.clientX,
+      startY: event.clientY,
+      originWidthRatio: model.widthRatio,
+      originHeightRatio: model.heightRatio
+    };
+    element.classList.add('resizing');
   });
 
   element.addEventListener('pointermove', (event) => {
@@ -100,16 +125,54 @@ function makeDraggable(element, model) {
     syncSliceStyle(pointerState.model, element);
   });
 
-  const endDrag = (event) => {
-    if (!pointerState || pointerState.id !== event.pointerId || pointerState.target !== element) {
+  handle.addEventListener('pointermove', (event) => {
+    if (!pointerState || pointerState.id !== event.pointerId || pointerState.target !== handle) {
       return;
     }
-    element.classList.remove('dragging');
+
+    const rect = getPreviewRect();
+    const deltaXRatio = (event.clientX - pointerState.startX) / rect.width;
+    const deltaYRatio = (event.clientY - pointerState.startY) / rect.height;
+
+    const maxWidthRatio = 1 - pointerState.model.xRatio;
+    const maxHeightRatio = 1 - pointerState.model.yRatio;
+
+    const nextWidthRatio = clamp(
+      pointerState.originWidthRatio + deltaXRatio,
+      MIN_SLICE_RATIO,
+      maxWidthRatio
+    );
+    const nextHeightRatio = clamp(
+      pointerState.originHeightRatio + deltaYRatio,
+      MIN_SLICE_RATIO,
+      maxHeightRatio
+    );
+
+    pointerState.model.widthRatio = nextWidthRatio;
+    pointerState.model.heightRatio = nextHeightRatio;
+    syncSliceStyle(pointerState.model, element);
+  });
+
+  const endAction = (event) => {
+    if (!pointerState || pointerState.id !== event.pointerId) {
+      return;
+    }
+
+    if (pointerState.target === element) {
+      element.classList.remove('dragging');
+    }
+
+    if (pointerState.target === handle) {
+      element.classList.remove('resizing');
+    }
+
     pointerState = null;
   };
 
-  element.addEventListener('pointerup', endDrag);
-  element.addEventListener('pointercancel', endDrag);
+  element.addEventListener('pointerup', endAction);
+  element.addEventListener('pointercancel', endAction);
+  handle.addEventListener('pointerup', endAction);
+  handle.addEventListener('pointercancel', endAction);
 }
 
 function renderWindows() {
@@ -117,8 +180,15 @@ function renderWindows() {
   slices.forEach((sliceModel) => {
     const sliceElement = document.createElement('div');
     sliceElement.className = 'slice';
+
+    const resizeHandle = document.createElement('div');
+    resizeHandle.className = 'resize-handle';
+    resizeHandle.setAttribute('aria-hidden', 'true');
+
     syncSliceStyle(sliceModel, sliceElement);
-    makeDraggable(sliceElement, sliceModel);
+    makeDraggableAndResizable(sliceElement, resizeHandle, sliceModel);
+
+    sliceElement.appendChild(resizeHandle);
     windows.appendChild(sliceElement);
   });
 }
